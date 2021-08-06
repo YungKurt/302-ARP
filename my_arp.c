@@ -62,11 +62,11 @@ void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address
 
 	/* arp header */
 	struct arphdr *arph = (struct arphdr*)(buffer + sizeof(struct ethhdr));
-    arph->ar_hrd = htons(ARPHRD_ETHER); 
-    arph->ar_pro = htons(ETH_P_IP);
-    arph->ar_hln = 6;
-    arph->ar_pln = 4;
-    arph->ar_op = htons(ARPOP_REPLY);
+    	arph->ar_hrd = htons(ARPHRD_ETHER); 
+    	arph->ar_pro = htons(ETH_P_IP);
+    	arph->ar_hln = 6;
+    	arph->ar_pln = 4;
+    	arph->ar_op = htons(ARPOP_REPLY);
 }
 
 /**
