@@ -21,10 +21,7 @@
  */
 void my_arp_init()
 {
-struct 
-
-
-
+	
 }
 
 /**
@@ -36,6 +33,8 @@ struct
  */ 
 void my_arp_resolve (uint32_t ip_address)
 {
+	const unsigned char *dest_mac_address[] = ff:ff:ff:ff:ff:ff;	
+	arp_send_query(ip_adress, &dest_mac_address)
 }
 
 /**
