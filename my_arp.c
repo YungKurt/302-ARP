@@ -34,7 +34,7 @@ void my_arp_init()
 void my_arp_resolve (uint32_t ip_address)
 {
 	const unsigned char *dest_mac_address[] = ff:ff:ff:ff:ff:ff;	
-	arp_send_query(ip_adress, &dest_mac_address)
+	arp_send_query(ip_adress, *dest_mac_address)
 }
 
 /**
@@ -50,6 +50,23 @@ void my_arp_resolve (uint32_t ip_address)
  */ 
 void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address)
 {
+	char buffer[1000] = {};	
+	char mac_buffer[48] = {};
+	unsigned char my_mac_address[48] = arp_get_my_macaddr(&buffer);
+
+	/* eth header */
+	struct ethhdr *eth = (struct ethhdr *)buffer;
+	memcpy(eth->h_source, my_mac_address, 6);
+	memcpy(eth->h_dest, *mac_address, 6);
+	eth->h_proto = htons(ETH_P_ARP);
+
+	/* arp header */
+	struct arphdr *arph = (struct arphdr*)(buffer + sizeof(struct ethhdr));
+    arph->ar_hrd = htons(ARPHRD_ETHER); 
+    arph->ar_pro = htons(ETH_P_IP);
+    arph->ar_hln = 6;
+    arph->ar_pln = 4;
+    arph->ar_op = htons(ARPOP_REPLY);
 }
 
 /**
