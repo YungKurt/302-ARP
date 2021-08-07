@@ -13,6 +13,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+/*mac address*/
+unsigned char my_mac_address[6];
+/* IP address*/
+uint32_t my_ip_address;
 
 /**
  * This function will be called at the start of the program. You can
@@ -33,8 +37,8 @@ void my_arp_init()
  */ 
 void my_arp_resolve (uint32_t ip_address)
 {
-	const unsigned char *dest_mac_address[] = ff:ff:ff:ff:ff:ff;	
-	arp_send_query(ip_adress, *dest_mac_address)
+	char dest_mac_address[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}	
+	arp_send_query(ip_adress, dest_mac_address)
 }
 
 /**
@@ -51,8 +55,9 @@ void my_arp_resolve (uint32_t ip_address)
 void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address)
 {
 	char buffer[1000] = {};	
-	char mac_buffer[48] = {};
-	unsigned char my_mac_address[48] = arp_get_my_macaddr(&buffer);
+	char mac_buffer[6] = {};
+	arp_get_my_macaddr(&buffer);
+	my_ip_address = arp_get_my_ipaddr();
 
 	/* eth header */
 	struct ethhdr *eth = (struct ethhdr *)buffer;
@@ -62,11 +67,27 @@ void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address
 
 	/* arp header */
 	struct arphdr *arph = (struct arphdr*)(buffer + sizeof(struct ethhdr));
-    	arph->ar_hrd = htons(ARPHRD_ETHER); 
-    	arph->ar_pro = htons(ETH_P_IP);
-    	arph->ar_hln = 6;
-    	arph->ar_pln = 4;
-    	arph->ar_op = htons(ARPOP_REPLY);
+    arph->ar_hrd = htons(ARPHRD_ETHER); 
+    arph->ar_pro = htons(ETH_P_IP);
+    arph->ar_hln = 6;
+    arph->ar_pln = 4;
+    arph->ar_op = htons(ARPOP_REPLY);
+
+	/* Fill in rest of the contents */
+    struct arpdata *arpd = (struct arpdata*)(buffer + sizeof(struct ethhdr) + sizeof(struct arphdr));
+    memcpy(arpd->ar_sha, my_mac_address, 6); /*source mac */
+	memcpy(arpd->ar_tha, mac_address, 6); /* target mac */
+    arpd->ar_sip = htonl(my_ip_address); /*src ip */
+    arpd->ar_tip = htonl(ip_address); /* target ip */
+
+
+	int len = sizeof(buffer);
+	char frame_buffer[len];
+	memcpy(frame_buffer, &eth, sizeof(ethhdr));
+	memcpy(frame_buffer, &arph, sizeof(arphdr));
+	memcpy(frame_buffer, &arpdata, sizeof(arpdata))
+	arp_send_reply(frame_buffer, len); 
+	
 }
 
 /**
@@ -80,7 +101,8 @@ void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address
  * This should be a 48-bit MAC address.
  */ 
 void my_arp_handle_reply(uint32_t ip_address, const unsigned char *mac_address)
-{   
+{
+	arp_insert_cache(ip_address, mac_address)	   
 }
 
 /**
