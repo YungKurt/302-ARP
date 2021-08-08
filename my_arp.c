@@ -12,6 +12,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <net/if.h>
+#include <net/if_arp.h>
 
 /*mac address*/
 unsigned char my_mac_address[6];
@@ -25,6 +27,7 @@ uint32_t my_ip_address;
  */
 void my_arp_init()
 {
+	printf("init started.\n");
 	
 }
 
@@ -37,8 +40,10 @@ void my_arp_init()
  */ 
 void my_arp_resolve (uint32_t ip_address)
 {
-	char dest_mac_address[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}	
-	arp_send_query(ip_adress, dest_mac_address)
+	printf("arp resolve function.\n");
+	char dest_mac_address[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};	
+	printf("Sending broadcast request.\n");
+	arp_send_query(ip_address, dest_mac_address);
 }
 
 /**
@@ -54,39 +59,45 @@ void my_arp_resolve (uint32_t ip_address)
  */ 
 void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address)
 {
+	printf("Handle request function.\n");
 	char buffer[1000] = {};	
-	char mac_buffer[6] = {};
-	arp_get_my_macaddr(&buffer);
-	my_ip_address = arp_get_my_ipaddr();
+	unsigned char mac_buffer[6];
+	arp_get_my_macaddr(mac_buffer);
+	int my_ip_address = arp_get_my_ipaddr();
 
-	/* eth header */
-	struct ethhdr *eth = (struct ethhdr *)buffer;
-	memcpy(eth->h_source, my_mac_address, 6);
-	memcpy(eth->h_dest, *mac_address, 6);
-	eth->h_proto = htons(ETH_P_ARP);
+	if(my_ip_address == ip_address){
 
-	/* arp header */
-	struct arphdr *arph = (struct arphdr*)(buffer + sizeof(struct ethhdr));
-    arph->ar_hrd = htons(ARPHRD_ETHER); 
-    arph->ar_pro = htons(ETH_P_IP);
-    arph->ar_hln = 6;
-    arph->ar_pln = 4;
-    arph->ar_op = htons(ARPOP_REPLY);
+		/* eth header */
+		printf("Constructing eth header.\n");
+		struct ethhdr *eth = (struct ethhdr *)buffer;
+		memcpy(eth->h_source, mac_buffer, 6);
+		memcpy(eth->h_dest, mac_address, 6);
+		eth->h_proto = htons(ETH_P_ARP);
 
-	/* Fill in rest of the contents */
-    struct arpdata *arpd = (struct arpdata*)(buffer + sizeof(struct ethhdr) + sizeof(struct arphdr));
-    memcpy(arpd->ar_sha, my_mac_address, 6); /*source mac */
-	memcpy(arpd->ar_tha, mac_address, 6); /* target mac */
-    arpd->ar_sip = htonl(my_ip_address); /*src ip */
-    arpd->ar_tip = htonl(ip_address); /* target ip */
+		/* arp header */
+		printf("Constructing arp header.\n");
+		struct arphdr *arph = (struct arphdr*)(buffer + sizeof(struct ethhdr));
+		arph->ar_hrd = htons(ARPHRD_ETHER); 
+		arph->ar_pro = htons(ETH_P_IP);
+		arph->ar_hln = 6;
+		arph->ar_pln = 4;
+		arph->ar_op = htons(ARPOP_REPLY);
 
+		/* Fill in rest of the contents */
+		printf("Filling in arpdata.\n");
+		struct arpdata *arpd = (struct arpdata*)(buffer + sizeof(struct ethhdr) + sizeof(struct arphdr));
+		memcpy(arpd->ar_sha, mac_buffer, 6); /*source mac */
+		memcpy(arpd->ar_tha, mac_address, 6); /* target mac */
+		arpd->ar_sip = htonl(my_ip_address); /*src ip */
+		arpd->ar_tip = htonl(ip_address); /* target ip */
 
-	int len = sizeof(buffer);
-	char frame_buffer[len];
-	memcpy(frame_buffer, &eth, sizeof(ethhdr));
-	memcpy(frame_buffer, &arph, sizeof(arphdr));
-	memcpy(frame_buffer, &arpdata, sizeof(arpdata))
-	arp_send_reply(frame_buffer, len); 
+		printf("Sending ethernet arp frame.\n");
+		arp_send_reply(buffer, sizeof buffer);
+		printf("Sent.\n");
+
+	}
+
+	 
 	
 }
 
@@ -102,7 +113,7 @@ void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address
  */ 
 void my_arp_handle_reply(uint32_t ip_address, const unsigned char *mac_address)
 {
-	arp_insert_cache(ip_address, mac_address)	   
+	arp_insert_cache(ip_address, mac_address);	   
 }
 
 /**
