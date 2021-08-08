@@ -60,12 +60,13 @@ void my_arp_resolve (uint32_t ip_address)
 void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address)
 {
 	printf("Handle request function.\n");
-	char buffer[1000] = {};	
 	unsigned char mac_buffer[6];
 	arp_get_my_macaddr(mac_buffer);
 	int my_ip_address = arp_get_my_ipaddr();
 
 	if(my_ip_address == ip_address){
+		
+		char buffer[1000] = {};	
 
 		/* eth header */
 		printf("Constructing eth header.\n");
@@ -92,7 +93,8 @@ void my_arp_handle_request(uint32_t ip_address, const unsigned char *mac_address
 		arpd->ar_tip = htonl(ip_address); /* target ip */
 
 		printf("Sending ethernet arp frame.\n");
-		arp_send_reply(buffer, sizeof buffer);
+		int len = sizeof(struct ethhdr) + sizeof(struct arphdr) + sizeof(struct arpdata);
+		arp_send_reply(buffer, len);
 		printf("Sent.\n");
 
 	}
